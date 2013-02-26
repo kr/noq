@@ -1,0 +1,28 @@
+Noq accepts connections on behalf of a single-threaded web app server
+running inside a Heroku dyno. It improves request queueing behavior by
+taking advantage of the Heroku router's policy of retrying failed TCP
+connections on multiple dynos.
+
+Noq accepts connections on a public port, dials a local port to reach
+the wrapped process, and copies data between the two. During each
+connection, the public listening port is closed -- only one connection
+at a time will be accepted. Any attempted concurrent connections will
+be refused or reset.
+
+Usage:
+
+    noq cmd [arg...]
+
+Prefix the web command in your Procfile with noq. It's probably easiest
+to copy noq.c into your project and compile it when your dyno boots.
+For example, if your Procfile contains this:
+
+    web: bundle exec thin start -p $PORT
+
+you'd change it to this:
+
+    web: make noq && ./noq bundle exec thin start -p $PORT
+
+(Noq chooses a port to use for internal connections, replaces any
+argument equal to the value of PORT with this internal port number,
+and then resets PORT to the internal port number.)
