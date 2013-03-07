@@ -26,3 +26,21 @@ you'd change it to this:
 (Noq chooses a port to use for internal connections, replaces any
 argument equal to the value of PORT with this internal port number,
 and then resets PORT to the internal port number.)
+
+The behavior of noq is controlled by two environment variables.
+
+PORT
+
+    This is the public TCP port number that noq will listen on. It's
+    set by Heroku when the dyno starts.
+
+    Required.
+
+NOQMAXCONNS
+
+    This integer specifies how many connections noq will allow to be open
+    at any time. When NOQMAXCONNS connections are open, noq will close the
+    public port. When one of these connections is closed, noq will reopen
+    the public port.
+
+    Optional; defaults to 1.

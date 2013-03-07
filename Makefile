@@ -1,1 +1,1 @@
-CFLAGS := -Wall -Werror
+CFLAGS := -Wall -Werror -g -O0
