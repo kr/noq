@@ -1,13 +1,13 @@
-Noq accepts connections on behalf of a single-threaded web app server
+Noq accepts connections on behalf of a fixed-concurrency web app server
 running inside a Heroku dyno. It improves request queueing behavior by
 taking advantage of the Heroku router's policy of retrying failed TCP
 connections on multiple dynos.
 
 Noq accepts connections on a public port, dials a local port to reach
-the wrapped process, and copies data between the two. During each
-connection, the public listening port is closed -- only one connection
-at a time will be accepted. Any attempted concurrent connections will
-be refused or reset.
+the wrapped process, and copies data between the two. When the connection
+limit is hit, the public listening port is closed -- only a fixed number
+of connections at a time will be accepted. Any attempted connections
+during this time will be refused or reset.
 
 Usage:
 
