@@ -241,14 +241,14 @@ main(int narg, char **arg)
 	}
 	const unsigned short N = scanshort(getenv("NOQMAXCONNS") ? : "1");
 	const unsigned short aport = scanshort(getenv("PORT"));
-	const unsigned short dport = 5000;
+	const unsigned short dport = 2000;
 	int i;
 	for (i=0; i<narg; i++) {
 		if (strcmp(getenv("PORT"), arg[i]) == 0) {
-			arg[i] = "5000";
+			arg[i] = "2000";
 		}
 	}
-	setenv("PORT", "5000", 1);
+	setenv("PORT", "2000", 1);
 
 	dfork(arg+1);
 
