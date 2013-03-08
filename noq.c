@@ -83,12 +83,7 @@ diallocal(unsigned short port)
 	addr.sin_port = htons(port);
 	inet_aton("127.0.0.1", &addr.sin_addr);
 
-	int r = connect(conn, (struct sockaddr *) &addr, sizeof addr);
-	if (r == -1 && errno != ECONNREFUSED) {
-		perror("noq: connect");
-		exit(1);
-	}
-	return conn;
+	return connect(conn, (struct sockaddr *) &addr, sizeof addr);
 }
 
 static void
@@ -98,6 +93,14 @@ bufinit(Buffer *b, int r, int w)
 	b->r = r;
 	b->w = w;
 	b->open = 1;
+}
+
+// Causes b to be marked as finished and ready to close.
+// The next time through the main loop its w fd will be closed.
+static void
+bufpoison(Buffer *b)
+{
+	b->reof = b->weof = 1;
 }
 
 static int
@@ -145,12 +148,7 @@ bufrw(Buffer *b, fd_set *rfd, fd_set *wfd)
 {
 	if (FD_ISSET(b->r, rfd)) {
 		int r = read(b->r, b->dat+b->head, bufspc(b));
-		if (r == -1 && errno == ECONNRESET) {
-			b->reof = 1;
-		} else if (r == -1) {
-			perror("noq: read");
-			exit(1);
-		} else if (r == 0) {
+		if (r < 1) {
 			b->reof = 1;
 		} else {
 			b->head += r;
@@ -159,12 +157,12 @@ bufrw(Buffer *b, fd_set *rfd, fd_set *wfd)
 	}
 	if (FD_ISSET(b->w, wfd)) {
 		int r = write(b->w, b->dat+b->tail, buflen(b));
-		if (r == -1) {
-			perror("noq: write");
-			exit(1);
+		if (r < 1) {
+			bufpoison(b);
+		} else {
+			b->tail += r;
+			b->tail %= sizeof b->dat;
 		}
-		b->tail += r;
-		b->tail %= sizeof b->dat;
 	}
 	if (b->reof && buflen(b)==0 && !b->weof) {
 		shutdown(b->w, SHUT_WR);
@@ -292,13 +290,12 @@ main(int narg, char **arg)
 			for (i=0; i<N; i++) {
 				Buffer *pair = &b[2*i];
 				if (!pair[0].open && !pair[1].open) {
-					bufinit(&pair[0], aconn, dconn);
-					bufinit(&pair[1], dconn, aconn);
+					bufinit(pair, aconn, dconn);
+					bufinit(pair+1, dconn, aconn);
 					if (dconn == -1) {
-						// We got ECONNREFUSED.
-						// Set up this pair to be closed immediately.
-						pair[0].reof = pair[0].weof = 1;
-						pair[1].reof = pair[1].weof = 1;
+						// Error in connect(2).
+						bufpoison(pair);
+						bufpoison(pair+1);
 					}
 					nb++;
 					break;
